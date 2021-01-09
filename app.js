@@ -48,17 +48,19 @@ app.use('/get', (req, res) => {
         console.log(ret);
         let className = $(ele).children().children().children().eq(1).attr('class');
         // console.log(className);
-        ret.data[idx + 1] = {
-            title: $(ele).find('.freebirdFormviewerComponentsQuestionBaseTitle').text(),
-            desc: $(ele).find('.freebirdFormviewerComponentsQuestionBaseDescription').text(),
-            imgUrl: $(ele).find('.freebirdFormviewerViewItemsEmbeddedobjectImageWrapper').find('img').attr('src')
-        }
-
+        (function () {
+            ret.data[idx + 1] = {
+                title: $(ele).find('.freebirdFormviewerComponentsQuestionBaseTitle').text(),
+                desc: $(ele).find('.freebirdFormviewerComponentsQuestionBaseDescription').text(),
+                imgUrl: $(ele).find('.freebirdFormviewerViewItemsEmbeddedobjectImageWrapper').find('img').attr('src')
+            }
+            console.log(idx + 1, ret.data)
+        }());
         if (className == "freebirdFormviewerComponentsQuestionRadioRoot") {
             // 객관식 Radio
             let isChecked;
             let lst = [];
-            ($(ele).find('label')).each((idx, elem) => {
+            $(ele).find('label').each((idx, elem) => {
                 if ($(elem).hasClass('isChecked')) {
                     isChecked = $(elem).text();
                     lst.push($(elem).text())
@@ -66,19 +68,16 @@ app.use('/get', (req, res) => {
                     lst.push($(elem).text())
                     // console.log($(elem).text() + "를 선택하지 않음");
                 }
-            })
-            ret.data[idx + 1] += {
-                type: 2,
-                list: lst,
-                ans: isChecked
-            };
+            });
+            ret.data[idx + 1].type = 2;
+            ret.data[idx + 1].list = lst;
+            ret.data[idx + 1].ans = isChecked;
         } else if (className == "freebirdFormviewerComponentsQuestionTextRoot") {
-            ret.data[idx + 1] += {
-                type: 0,
-                list: "",
-                ans: ""
-            };
             // 단답형
+            ret.data[idx + 1].type = 0;
+            ret.data[idx + 1].list = "";
+            ret.data[idx + 1].ans = "";
+
             if ($(ele).find('input').length != 0) {
                 ret.data[idx + 1].type = 0;
                 ret.data[idx + 1].ans = $(ele).find('input').attr('data-initial-value');
@@ -91,19 +90,18 @@ app.use('/get', (req, res) => {
             // 체크박스
             let isChecked = [];
             let lst = [];
-            ($(ele).find('label')).each((idx, elem) => {
+            $(ele).find('label').each((idx, elem) => {
                 if ($(elem).hasClass('isChecked')) {
-                    isChecked.push((elem).text())
+                    isChecked.push($(elem).text())
                     lst.push($(elem).text());
                 } else {
                     lst.push($(elem).text());
                 }
-            })
-            ret.data[idx + 1] += {
-                type: 3,
-                list: lst,
-                ans: isChecked
-            };
+            });
+
+            ret.data[idx + 1].type = 3;
+            ret.data[idx + 1].list = lst;
+            ret.data[idx + 1].ans = isChecked;
         } else if (className == "freebirdFormviewerComponentsQuestionSelectRoot") {
             // 드롭다운
             let isChecked;
@@ -116,12 +114,11 @@ app.use('/get', (req, res) => {
                 } else {
                     lst.push($(elem).text())
                 }
-            })
-            ret.data[idx + 1] += {
-                type: 4,
-                list: lst,
-                ans: isChecked
-            };
+            });
+
+            ret.data[idx + 1].type = 4;
+            ret.data[idx + 1].list = lst;
+            ret.data[idx + 1].ans = isChecked;
         } else if (className == "freebirdFormviewerComponentsQuestionScaleRoot") {
             // 직선단계
             let isChecked;
@@ -133,12 +130,11 @@ app.use('/get', (req, res) => {
                     lst.push($(elem).attr('data-value'))
                     isChecked = $(elem).attr('data-value');
                 }
-            })
-            ret.data[idx + 1] += {
-                type: 5,
-                list: lst,
-                ans: isChecked
-            };
+            });
+
+            ret.data[idx + 1].type = 5;
+            ret.data[idx + 1].list = lst;
+            ret.data[idx + 1].ans = isChecked;
         } else if (className == "freebirdFormviewerComponentsQuestionGridRoot") {
             // 객관식 그리드 6
             let hang = []
@@ -180,54 +176,38 @@ app.use('/get', (req, res) => {
             })
 
             if (chk == 1) {
-                ret.data[idx + 1] = {
-                    type: 7
-                }
+                ret.data[idx + 1].type = 7;
             } else {
-                ret.data[idx + 1] = {
-                    type: 6
-                }
-            }
-
-            ret.data[idx + 1] += {
-                list: {
-                    hang: hang,
-                    ryul: ryul
-                },
-                ans: isChecked
+                ret.data[idx + 1].type = 6;
             };
+            ret.data[idx + 1].list = { hang, ryul };
+            ret.data[idx + 1].ans = isChecked;
         } else if (className == undefined) {
             // 날짜
-            console.log($(ele).find('input').attr('data-initial-value'))
-            ret.data[idx + 1] += {
-                type: 8,
-                list: "",
-                ans: $(ele).find('input').attr('data-initial-value')
-            };
+            ret.data[idx + 1].type = 8;
+            ret.data[idx + 1].list = "";
+            ret.data[idx + 1].ans = $(ele).find('input').attr('data-initial-value');
         } else if (className == "freebirdFormviewerComponentsQuestionTimeRoot") {
             // 시간
-            let ret = "";
+            let str = "";
             $(ele).find('input').each((idx, elem) => {
                 if (idx == 0) {
-                    ret = $(elem).attr('data-initial-value');
+                    str = $(elem).attr('data-initial-value');
                 } else {
-                    ret += " : " + $(elem).attr('data-initial-value');
+                    str += " : " + $(elem).attr('data-initial-value');
                 }
             })
             $(ele).find('.quantumWizMenuPaperselectOption').each((idx, elem) => {
                 if ($(elem).attr('aria-selected') == "true") {
-                    ret += $(elem).attr('data-value');
+                    str += $(elem).attr('data-value');
                 }
-            })
-            console.log(ret.data)
-            ret.data[idx + 1] += {
-                type: 9,
-                list: "",
-                ans: ret
-            };
+            });
+            ret.data[idx + 1].type = 9;
+            ret.data[idx + 1].list = "";
+            ret.data[idx + 1].ans = str;
         } else {
             console.log(className);
         }
     })
-    console.log(ret)
+    fs.writeFileSync('./txt.json', JSON.stringify(ret));
 })
