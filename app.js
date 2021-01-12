@@ -28,6 +28,7 @@ app.use(body.urlencoded({
     extended: true
 }));
 
+
 app.use('/get', (req, res) => {
     console.log('received')
     let resultJSON = "";
