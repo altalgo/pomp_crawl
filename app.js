@@ -6,7 +6,20 @@ const https = require('https');
 const cors = require('cors');
 const cheerio = require("cheerio");
 const axios = require('axios');
+const mysql2 = require('mysql2');
+const dotenv = require('dotenv');
 
+dotenv.config(); // .env파일로 환경변수 적용
+
+const connection = mysql2.createPool({
+    host: process.env.MYSQL2_HOST,
+    user: process.env.MYSQL2_USER,
+    password: process.env.MYSQL2_PW,
+    database: process.env.MYSQL2_DB
+});
+
+
+// SSL 설정
 try {
     const option = {
         cert: fs.readFileSync("/home/ubuntu/docker/etc/phpmyadmin/phpmyadmin/ssl/fullchain.pem"),
@@ -19,7 +32,10 @@ try {
     console.error(err);
 }
 
+// CORS 설정
 app.use(cors());
+
+// POST 크기 제한 상향
 app.use(body.json({
     limit: "10mb"
 }));
@@ -29,29 +45,32 @@ app.use(body.urlencoded({
 }));
 
 
+// EXTENSION에서 POST 받아옴
 app.use('/get', (req, res) => {
-    console.log('received')
-    let resultJSON = "";
-    Object.values(req.body).map((val, idx) => {
-        let ret = {
-            session: "",
-            data: [
-        
-            ]
-        }
-        // console.log(val)
+    console.log(req.body);
+    let ret = {
+        session: "",
+        data: [
+
+        ]
+    }
+    let idx = 0;
+
+    // 섹션 map
+    Object.values(req.body.question).map((val, idx2) => {
         const $ = cheerio.load(val)
         let $head = $('.freebirdFormviewerViewNoPadding');
         $head = $head.find('.freebirdFormviewerViewHeaderHeader')
         let title = $head.find('.freebirdFormviewerViewHeaderTitleRow').find('.freebirdFormviewerViewHeaderTitle').text()
-        // console.log(title)
         let desc = $head.find('.freebirdFormviewerViewHeaderDescription').text();
-        ret.data[0] = { title, desc, type: -1 };
 
+        // 폼 타이틀 지정
+        if (title != "")
+            ret.data[0] = { title, desc, type: -1 };
+
+        // 섹션 내 질문 container map
         const $body = $('.freebirdFormviewerViewNumberedItemContainer');
-        // console.log($($body[0]).html());
-        
-        $body.each((idx, ele) => {
+        $body.each((idx3, ele) => {
             (function () {
                 ret.data[idx + 1] = {
                     title: $(ele).find('.freebirdFormviewerComponentsQuestionBaseTitle').text(),
@@ -63,7 +82,7 @@ app.use('/get', (req, res) => {
             let obj = $(ele).children().children().children();
             obj.each((idx1, elem) => {
                 let className = $(elem).attr('class');
-                console.log(idx, idx1, className);
+                // console.log(idx, idx1, className);
                 if (className == "freebirdFormviewerComponentsQuestionTextRoot") {
                     // 단답형
                     ret.data[idx + 1].type = 0;
@@ -226,15 +245,29 @@ app.use('/get', (req, res) => {
                     ret.data[idx + 1].ans = str;
                 } else {
                     // 사진 걸러내야댐 ..
-                    // console.log(className)
+                    console.log(className)
                 }
             });
+            idx += 1;
         })
-        // console.log(ret)
-        resultJSON += JSON.stringify(ret)
-        fs.writeFileSync('./val.html', val);
-        fs.writeFileSync('./val.json', JSON.stringify(ret));
     })
-    // console.log(resultJSON)
-    fs.writeFileSync('./txt.json', resultJSON);
+    connection.query('SELECT * FROM users WHERE userUUID = ?', [req.body.uuid], (err, result, fields) => {
+        if (err)
+            console.error(err);
+        else {
+            if (result[0]) { // user가 존재한다면
+                connection.query('INSERT INTO forms(userId, session, data, createdAt, updatedAt) VALUES(?,?,?,?,?)', [result[0].id, req.body.uuid, JSON.stringify(ret.data), new Date(), new Date()], (err2, result2, fields2) => {
+                    if (err2)
+                        console.error(err2);
+                    else {
+                        console.log('successfully inserted');
+                    }
+                });
+                console.log(result[0])
+            } else {
+                console.log('no uuid');
+            }
+        }
+    })
+    fs.writeFileSync('./txt.json', JSON.stringify(ret));
 })
