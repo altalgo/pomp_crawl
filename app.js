@@ -18,20 +18,9 @@ const connection = mysql2.createPool({
     database: process.env.MYSQL2_DB
 });
 
-
-// SSL 설정
-try {
-    const option = {
-        cert: fs.readFileSync("/home/ubuntu/docker/etc/phpmyadmin/phpmyadmin/ssl/fullchain.pem"),
-        key: fs.readFileSync("/home/ubuntu/docker/etc/phpmyadmin/phpmyadmin/ssl/privkey.pem")
-    }
-    const server = https.createServer(option, app).listen(3003, () => {
-        console.log('server has started');
-    })
-} catch (err) {
-    console.error(err);
-}
-
+const server = app.listen(3003, () => {
+    console.log('server has started');
+})
 // CORS 설정
 app.use(cors());
 
@@ -45,9 +34,8 @@ app.use(body.urlencoded({
 }));
 
 
-// EXTENSION에서 POST 받아옴
+// EXTENSION에서 POST 받아옴    
 app.use('/get', (req, res) => {
-    // console.log(req.body);
     let ret = {
         session: "",
         data: [
@@ -66,7 +54,7 @@ app.use('/get', (req, res) => {
 
         // 폼 타이틀 지정
         if (title != "")
-            ret.data[0] = { title, desc, type: -1 };
+            ret.data[0] = { title, desc, formUrl: req.body.formUrl, type: -1 };
 
         // 섹션 내 질문 container map
         const $body = $('.freebirdFormviewerViewNumberedItemContainer');
@@ -277,6 +265,10 @@ app.use('/get', (req, res) => {
                     ret.data[idx + 1].ans = href;
                     ret.data[idx + 1].desc = $(elem).next().text();
                     ret.data[idx + 1].type = 12;
+                } else if (className === "freebirdFormviewerComponentsQuestionFileuploadRoot") {
+                    let link = $(elem).find('.freebirdMaterialWidgetsFilechipFileChipLink').attr('data-view-file-link');
+                    ret.data[idx + 1].ans = link;
+                    ret.data[idx + 1].type = 13;
                 } else {
                     // 사진 걸러내야댐 ..
                     console.log(className)
